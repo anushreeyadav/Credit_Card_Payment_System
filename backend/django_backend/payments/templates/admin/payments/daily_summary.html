@@ -1,0 +1,72 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .summary-tiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 24px; }
+  .summary-tile { flex: 1 1 150px; border: 1px solid var(--hairline-color); border-radius: 6px; padding: 14px 16px; background: var(--body-bg); }
+  .summary-tile .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--body-quiet-color); }
+  .summary-tile .value { font-size: 1.75rem; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .summary-tile.success .value { color: #2e7d32; }
+  .summary-tile.failed .value { color: var(--error-fg, #ba2121); }
+  .summary-nav { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; }
+  .summary-nav form { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
+  .summary-table td.num, .summary-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .summary-note { color: var(--body-quiet-color); font-size: 0.8125rem; }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url 'admin:payments_payment_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+  &rsaquo; Daily summary
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  {% if error %}<ul class="messagelist"><li class="warning">{{ error }}</li></ul>{% endif %}
+
+  <div class="summary-nav">
+    <a class="button" href="?date={{ previous_day|date:'Y-m-d' }}">&larr; {{ previous_day|date:'d M' }}</a>
+    {% if next_day %}<a class="button" href="?date={{ next_day|date:'Y-m-d' }}">{{ next_day|date:'d M' }} &rarr;</a>{% endif %}
+    {% if not is_today %}<a class="button" href="?">Today</a>{% endif %}
+    <form method="get">
+      <label for="summary-date">Date</label>
+      <input type="date" id="summary-date" name="date" value="{{ day|date:'Y-m-d' }}">
+      <input type="submit" value="Show">
+    </form>
+  </div>
+  <p class="summary-note">Payments created on {{ day|date:'l, d F Y' }} ({{ time_zone }}).</p>
+
+  <div class="summary-tiles">
+    <div class="summary-tile"><div class="label">Total transactions</div><div class="value" id="summary-total">{{ summary.total }}</div></div>
+    <div class="summary-tile success"><div class="label">Successful</div><div class="value" id="summary-success">{{ summary.success }}</div></div>
+    <div class="summary-tile failed"><div class="label">Failed</div><div class="value" id="summary-failed">{{ summary.failed }}</div></div>
+    <div class="summary-tile"><div class="label">Pending</div><div class="value" id="summary-pending">{{ summary.pending }}</div></div>
+    <div class="summary-tile"><div class="label">Success rate</div><div class="value" id="summary-rate">{% if summary.success_rate is not None %}{{ summary.success_rate }}%{% else %}&ndash;{% endif %}</div></div>
+  </div>
+
+  <div class="module">
+    <h2>Total successful payment amount</h2>
+    {% if summary.successful_amounts %}
+    <table class="summary-table" style="width:100%">
+      <thead><tr><th>Currency</th><th class="num">Successful payments</th><th class="num">Total amount</th><th class="num">Average amount</th></tr></thead>
+      <tbody>
+        {% for row in summary.successful_amounts %}
+        <tr><td>{{ row.currency }}</td><td class="num">{{ row.count }}</td><td class="num" id="summary-amount-{{ row.currency }}">{{ row.total_amount }}</td><td class="num">{{ row.average_amount }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="padding: 8px 10px">No successful payments on this day.</p>
+    {% endif %}
+  </div>
+
+  <p class="summary-note">Totals are per currency; different currencies are never added together. Success rate counts completed payments only (pending excluded).</p>
+  <p><a href="{% url 'admin:payments_payment_changelist' %}?created_at__day={{ day|date:'j' }}&amp;created_at__month={{ day|date:'n' }}&amp;created_at__year={{ day|date:'Y' }}">View these transactions &rarr;</a></p>
+</div>
+{% endblock %}

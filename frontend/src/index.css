@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Self-hosted Inter (bundled by Vite), so the strict Content-Security-Policy still applies. */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900;
+  }
+}

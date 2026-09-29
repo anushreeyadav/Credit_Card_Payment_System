@@ -1,0 +1,10 @@
+from django.apps import AppConfig
+
+
+class AdminlogsConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'adminlogs'
+    verbose_name = 'Admin logs'
+
+    def ready(self):
+        from . import signals  # noqa: F401

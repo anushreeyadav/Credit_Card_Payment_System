@@ -1,0 +1,2787 @@
+{
+  "info": {
+    "_postman_id": "1314fae9-99cb-536c-a4ee-60edea7f1c52",
+    "name": "Credit Card Payment System",
+    "description": "Complete API for the Credit Card Payment System: Django (auth, cards, transactions, admin) and FastAPI (payments).\n\n**Run order matters**: run the collection top to bottom (Collection Runner or Newman). Requests save ids and tokens for later ones (`access_token`, `card_id`, `payment_reference`, ...).\n\n**Environment**: import `Credit_Card_Payment_System.postman_environment.example.json`, then set `admin_username` / `admin_password` to a staff or superuser account for the Admin folder.\n\nUse test card numbers only. API docs: Django `/api/docs/`, FastAPI `/docs`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "Register, log in, refresh (cookie), log out. Django.",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/register/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                ""
+              ]
+            },
+            "description": "Create a customer account. Does not log in. A unique username/email is generated for each run.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"email\": \"{{email}}\",\n  \"first_name\": \"Priya\",\n  \"last_name\": \"Sharma\",\n  \"password\": \"{{test_password}}\",\n  \"password_confirm\": \"{{test_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    const id = 'pm_' + Date.now().toString(36);",
+                  "    pm.collectionVariables.set('username', id);",
+                  "    pm.collectionVariables.set('email', id + '@example.com');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "    pm.test('Returns the new user', () => pm.expect(pm.response.json().username).to.eql(pm.collectionVariables.get('username')));",
+                  "    pm.test('Registering does not log in (no token)', () => pm.expect(pm.response.json()).to.not.have.property('access'));",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - duplicate username",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/register/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"email\": \"other-{{email}}\",\n  \"password\": \"{{test_password}}\",\n  \"password_confirm\": \"{{test_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "    pm.test('Error for \"username\"', () => pm.expect(pm.response.json()).to.have.property('username'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register - weak password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/register/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}_2\",\n  \"email\": \"2-{{email}}\",\n  \"password\": \"password123\",\n  \"password_confirm\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "    pm.test('Error for \"password\"', () => pm.expect(pm.response.json()).to.have.property('password'));",
+                  "    pm.test('Password is not echoed back', () => pm.expect(pm.response.text()).to.not.include('password123'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - wrong password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/login/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"Wrong-Password-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "    pm.test('Generic message', () => pm.expect(pm.response.json().detail).to.eql('Invalid username or password.'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/login/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            },
+            "description": "Saves `access` into the `access_token` environment variable. The refresh token arrives as the httpOnly cookie `ccps_refresh`, which Postman stores automatically.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{test_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    const data = pm.response.json();",
+                  "    pm.environment.set('access_token', data.access);",
+                  "    pm.test('Access token returned', () => pm.expect(data.access.split('.')).to.have.length(3));",
+                  "    pm.test('Refresh token only in an httpOnly cookie, not the body', () => {",
+                  "        pm.expect(data).to.not.have.property('refresh');",
+                  "        pm.expect(pm.response.headers.get('Set-Cookie') || '').to.match(/ccps_refresh=.+HttpOnly/i);",
+                  "    });",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Current user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/me/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Is the logged-in user', () => pm.expect(pm.response.json().username).to.eql(pm.collectionVariables.get('username')));",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Current user - no token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/me/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Current user - invalid token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/me/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "not.a.valid-token",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh access token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/refresh/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh",
+                ""
+              ]
+            },
+            "description": "No body: uses the `ccps_refresh` cookie from Login. Rotates the cookie.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.environment.set('access_token', pm.response.json().access);",
+                  "    pm.test('New access token', () => pm.expect(pm.response.json().access.split('.')).to.have.length(3));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/logout/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout",
+                ""
+              ]
+            },
+            "description": "Blacklists the refresh token and clears the cookie.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh after logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/refresh/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login again",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/login/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            },
+            "description": "Log back in for the rest of the collection.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{test_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.environment.set('access_token', pm.response.json().access);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cards",
+      "description": "Saved cards: add, list, delete. Stored and returned masked. Django.",
+      "item": [
+        {
+          "name": "List cards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/cards/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "cards",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add card (Visa test card)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/cards/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "cards",
+                ""
+              ]
+            },
+            "description": "Test card numbers only. The full number is sent once and never stored; the CVV is optional and never stored.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_number\": \"4111 1111 1111 1111\",\n  \"cardholder_name\": \"Priya Sharma\",\n  \"expiry_month\": 12,\n  \"expiry_year\": 2030,\n  \"cvv\": \"123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "    const card = pm.response.json();",
+                  "    pm.collectionVariables.set('card_id', card.id);",
+                  "    pm.test('Masked number only', () => { pm.expect(card.masked_number).to.eql('**** **** **** 1111'); pm.expect(card.last4).to.eql('1111'); });",
+                  "    pm.test('Brand detected', () => pm.expect(card.card_type).to.eql('visa'));",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add card (Mastercard test card)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/cards/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "cards",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_number\": \"5555555555554444\",\n  \"cardholder_name\": \"Priya Sharma\",\n  \"expiry_month\": 12,\n  \"expiry_year\": 2030\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "    pm.collectionVariables.set('second_card_id', pm.response.json().id);",
+                  "    pm.test('Masked', () => pm.expect(pm.response.json().masked_number).to.eql('**** **** **** 4444'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add card - invalid number",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/cards/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "cards",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_number\": \"4111111111111112\",\n  \"cardholder_name\": \"Priya Sharma\",\n  \"expiry_month\": 12,\n  \"expiry_year\": 2030\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "    pm.test('Error for \"card_number\"', () => pm.expect(pm.response.json()).to.have.property('card_number'));",
+                  "    pm.test('Number not echoed', () => pm.expect(pm.response.text()).to.not.include('4111111111111112'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add card - expired",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/cards/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "cards",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_number\": \"4111111111111111\",\n  \"cardholder_name\": \"Priya Sharma\",\n  \"expiry_month\": 1,\n  \"expiry_year\": 2020\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "    pm.test('Error for \"expiry_year\"', () => pm.expect(pm.response.json()).to.have.property('expiry_year'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List cards - after adding",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/cards/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "cards",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Two cards', () => pm.expect(pm.response.json()).to.have.length(2));",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete card",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/cards/{{second_card_id}}/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "cards",
+                "{{second_card_id}}",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete card - not found",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/cards/999999999/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "cards",
+                "999999999",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List cards - no token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/cards/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "cards",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "description": "Simulated payments with a saved card. FastAPI; uses the Django access token.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/health",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Healthy', () => pm.expect(pm.response.json()).to.eql({status: 'ok', database: 'ok'}));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Saved cards (payment service)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/cards",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "cards"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Includes the saved card', () => pm.expect(pm.response.json().map(c => c.id)).to.include(Number(pm.collectionVariables.get('card_id'))));",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay - success",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                ""
+              ]
+            },
+            "description": "Simulated: amounts up to 10,000.00 succeed on a valid card.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"amount\": \"250.00\",\n  \"currency\": \"INR\",\n  \"description\": \"Order #1001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "    const p = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_reference', p.reference);",
+                  "    pm.test('SUCCESS', () => pm.expect(p.status).to.eql('SUCCESS'));",
+                  "    pm.test('Reference ID', () => pm.expect(pm.response.json().reference).to.match(/^PAY-[0-9A-F]{24}$/));",
+                  "    pm.test('Masked card', () => pm.expect(p.masked_card).to.eql('**** **** **** 1111'));",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay - failed (insufficient funds)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                ""
+              ]
+            },
+            "description": "Simulated: amounts above 10,000.00 fail with \"Insufficient funds.\"",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"amount\": \"15000.00\",\n  \"currency\": \"INR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "    const p = pm.response.json();",
+                  "    pm.test('FAILED with reason', () => { pm.expect(p.status).to.eql('FAILED'); pm.expect(p.failure_reason).to.eql('Insufficient funds.'); });",
+                  "    pm.test('Reference ID', () => pm.expect(pm.response.json().reference).to.match(/^PAY-[0-9A-F]{24}$/));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get payment by reference",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/{{payment_reference}}",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "{{payment_reference}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Same payment', () => pm.expect(pm.response.json().reference).to.eql(pm.collectionVariables.get('payment_reference')));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get payment - unknown reference",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/PAY-DOESNOTEXIST",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "PAY-DOESNOTEXIST"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay - invalid amount",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"amount\": \"0\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "    pm.test('422 names the \"amount\" field', () => pm.expect(pm.response.json().detail.map(e => e.loc[e.loc.length - 1])).to.include('amount'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay - card not found",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": 999999999,\n  \"amount\": \"10.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "    pm.test('Card not found', () => pm.expect(pm.response.json().detail).to.eql('Card not found.'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay - card number / CVV rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                ""
+              ]
+            },
+            "description": "Only card_id is accepted. Extra fields are rejected and never echoed back.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"amount\": \"10.00\",\n  \"card_number\": \"4111111111111111\",\n  \"cvv\": \"123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "    pm.test('422 names the \"card_number\" field', () => pm.expect(pm.response.json().detail.map(e => e.loc[e.loc.length - 1])).to.include('card_number'));",
+                  "    pm.test('422 names the \"cvv\" field', () => pm.expect(pm.response.json().detail.map(e => e.loc[e.loc.length - 1])).to.include('cvv'));",
+                  "    pm.test('Values not echoed', () => pm.expect(pm.response.text()).to.not.include('4111111111111111'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay - card number in note rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"amount\": \"10.00\",\n  \"description\": \"card 4111 1111 1111 1111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "    pm.test('422 names the \"description\" field', () => pm.expect(pm.response.json().detail.map(e => e.loc[e.loc.length - 1])).to.include('description'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pay - no token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{fastapi_base_url}}/api/payments/",
+              "host": [
+                "{{fastapi_base_url}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"amount\": \"10.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "description": "Your payment history with filters and pagination. Django.",
+      "item": [
+        {
+          "name": "List transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/transactions/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    const d = pm.response.json();",
+                  "    pm.test('Paginated, newest first', () => { pm.expect(d.count).to.eql(2); pm.expect(d.results[0].amount).to.eql('15000.00'); });",
+                  "    pm.test('Masked cards only', () => d.results.forEach(t => pm.expect(t.masked_card).to.eql('**** **** **** 1111')));",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/transactions/?status=SUCCESS",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "SUCCESS"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Only SUCCESS', () => pm.response.json().results.forEach(t => pm.expect(t.status).to.eql('SUCCESS')));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by amount",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/transactions/?min_amount=100&max_amount=1000",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "min_amount",
+                  "value": "100"
+                },
+                {
+                  "key": "max_amount",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Within range', () => pm.response.json().results.forEach(t => pm.expect(Number(t.amount)).to.be.within(100, 1000)));",
+                  "    pm.test('One match', () => pm.expect(pm.response.json().count).to.eql(1));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filter by date",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/transactions/?date_from={{today}}&date_to={{today}}",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "{{today}}"
+                },
+                {
+                  "key": "date_to",
+                  "value": "{{today}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.collectionVariables.set('today', new Date().toISOString().slice(0, 10)); // UTC, as the API uses",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Both payments are from today', () => pm.expect(pm.response.json().count).to.eql(2));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Combined filters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/transactions/?status=FAILED&min_amount=10000&date_from={{today}}",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "FAILED"
+                },
+                {
+                  "key": "min_amount",
+                  "value": "10000"
+                },
+                {
+                  "key": "date_from",
+                  "value": "{{today}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.collectionVariables.set('today', new Date().toISOString().slice(0, 10)); // UTC, as the API uses",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Only the failed payment', () => { const d = pm.response.json(); pm.expect(d.count).to.eql(1); pm.expect(d.results[0].failure_reason).to.eql('Insufficient funds.'); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagination",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/transactions/?page_size=1&page=1",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page_size",
+                  "value": "1"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('One per page with a next link', () => { const d = pm.response.json(); pm.expect(d.results).to.have.length(1); pm.expect(d.next).to.include('page=2'); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid filter",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/transactions/?status=DONE",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "DONE"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "    pm.test('Error for \"status\"', () => pm.expect(pm.response.json()).to.have.property('status'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List transactions - no token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/transactions/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Staff-only dashboard API. Uses `admin_access_token` from \"Admin login\". Django.",
+      "item": [
+        {
+          "name": "Admin login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/login/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            },
+            "description": "Log in as a staff/superuser account (`admin_username` / `admin_password`). Saves `admin_access_token`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{admin_username}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.collectionVariables.set('today', new Date().toISOString().slice(0, 10));",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.environment.set('admin_access_token', pm.response.json().access);",
+                  "    pm.test('Staff account', () => pm.expect(pm.response.json().user.is_staff).to.be.true);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daily summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/summary/?date={{today}}",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "summary",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{today}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    const s = pm.response.json();",
+                  "    pm.test('Statistics present', () => ['total', 'success', 'failed', 'pending', 'success_rate', 'successful_amounts', 'last_7_days'].forEach(k => pm.expect(s).to.have.property(k)));",
+                  "    pm.test('Includes this run\\'s payments', () => { pm.expect(s.success).to.be.at.least(1); pm.expect(s.failed).to.be.at.least(1); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daily summary - invalid date",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/summary/?date=2026-02-30",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "summary",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-02-30"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "    pm.test('Error for \"date\"', () => pm.expect(pm.response.json()).to.have.property('date'));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Users - search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/users/?search={{username}}",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "{{username}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    const u = pm.response.json().results[0];",
+                  "    pm.collectionVariables.set('user_id', u.id);",
+                  "    pm.test('Finds the Postman user with counts', () => { pm.expect(u.username).to.eql(pm.collectionVariables.get('username')); pm.expect(u.card_count).to.eql(1); pm.expect(u.payment_count).to.eql(2); });",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate user",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/users/{{user_id}}/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{user_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Inactive', () => pm.expect(pm.response.json().is_active).to.be.false);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivated user is locked out",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/auth/me/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me",
+                ""
+              ]
+            },
+            "description": "The customer's still-unexpired access token is refused once the account is inactive.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reactivate user",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/users/{{user_id}}/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{user_id}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Active', () => pm.expect(pm.response.json().is_active).to.be.true);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/cards/?search={{username}}",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "cards",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "{{username}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Masked card of the Postman user', () => pm.expect(pm.response.json().results[0].masked_number).to.eql('**** **** **** 1111'));",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transactions - search by reference",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/transactions/?search={{payment_reference}}",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "{{payment_reference}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Exactly that payment', () => { const d = pm.response.json(); pm.expect(d.count).to.eql(1); pm.expect(d.results[0].username).to.eql(pm.collectionVariables.get('username')); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transactions - filter",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/transactions/?search={{username}}&status=FAILED",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "status",
+                  "value": "FAILED"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('One failed payment', () => pm.expect(pm.response.json().count).to.eql(1));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/logs/?action=user_updated&search={{username}}",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "logs",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "user_updated"
+                },
+                {
+                  "key": "search",
+                  "value": "{{username}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Deactivate + reactivate were logged', () => pm.expect(pm.response.json().count).to.eql(2));",
+                  "    pm.test('No card number, CVV, password or refresh token in the response', () => {",
+                  "        const body = pm.response.text();",
+                  "        // 13-19 digits standing alone (digits inside a longer word, like a hex reference id, are not card numbers)",
+                  "        pm.expect(body).to.not.match(/(?<![\\w*])\\d{13,19}(?!\\w)/);",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"cvv\"');",
+                  "        pm.expect(body.toLowerCase()).to.not.include('\"password\"');",
+                  "        pm.expect(body).to.not.include('\"refresh\"');",
+                  "        pm.expect(body).to.not.include('pbkdf2');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin log action types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/logs/actions/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "logs",
+                "actions",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "    pm.test('Includes Admin login', () => pm.expect(pm.response.json()).to.deep.include({value: 'login', label: 'Admin login'}));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin endpoint - customer token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/summary/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "summary",
+                ""
+              ]
+            },
+            "description": "A signed-in customer (not staff) is refused.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 403', () => pm.response.to.have.status(403));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin endpoint - no token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{django_base_url}}/api/admin/summary/",
+              "host": [
+                "{{django_base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "summary",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "{",
+                  "    pm.test('Status is 401', () => pm.response.to.have.status(401));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{admin_access_token}}",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "username",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "card_id",
+      "value": ""
+    },
+    {
+      "key": "second_card_id",
+      "value": ""
+    },
+    {
+      "key": "payment_reference",
+      "value": ""
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "today",
+      "value": ""
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+# Credit Card Payment System - full stack.
+#
+#   1. powershell -ExecutionPolicy Bypass -File .\docker\init-env.ps1   (creates .env with random secrets)
+#   2. docker compose up -d --build
+#   3. open http://localhost:8080
+#
+# Only the frontend (nginx) is published. MySQL, Django and FastAPI live on an
+# internal network that is not reachable from the host or the internet.
+# All secrets come from the git-ignored .env file next to this one.
+
+name: ccps
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
+      MYSQL_DATABASE: ${DB_NAME:-credit_card_payment_db}
+      MYSQL_USER: ${DB_USER:-ccps_app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set in .env}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks: [data]
+    healthcheck:
+      # Answers only once the real server (not the init-time server) is up.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  django:
+    build:
+      context: .
+      dockerfile: docker/django.Dockerfile
+    image: ccps-django
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set in .env}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set in .env}
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:${FRONTEND_PORT:-8080},http://127.0.0.1:${FRONTEND_PORT:-8080}
+      DJANGO_CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-8080},http://127.0.0.1:${FRONTEND_PORT:-8080}
+      # Plain HTTP on localhost: no HTTPS redirect, HSTS or Secure-only cookies.
+      # Put a TLS-terminating proxy in front and remove these four for a real deployment.
+      DJANGO_SECURE_SSL_REDIRECT: "False"
+      DJANGO_SECURE_HSTS_SECONDS: "0"
+      DJANGO_SECURE_COOKIES: "False"
+      AUTH_COOKIE_SECURE: "False"
+      # nginx is the one trusted proxy: client IPs come from its X-Forwarded-For entry.
+      DJANGO_NUM_PROXIES: "1"
+      # Share rate-limit and lockout counters between gunicorn workers.
+      DJANGO_CACHE_BACKEND: database
+      ENABLE_API_DOCS: ${ENABLE_API_DOCS:-True}
+      DB_NAME: ${DB_NAME:-credit_card_payment_db}
+      DB_USER: ${DB_USER:-ccps_app}
+      DB_PASSWORD: ${DB_PASSWORD:?set in .env}
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
+    networks: [data, edge]
+
+  fastapi:
+    build:
+      context: .
+      dockerfile: docker/fastapi.Dockerfile
+    image: ccps-fastapi
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      # Django's migrations create the tables FastAPI reads and writes.
+      django:
+        condition: service_healthy
+    environment:
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set in .env}
+      DB_NAME: ${DB_NAME:-credit_card_payment_db}
+      DB_USER: ${DB_USER:-ccps_app}
+      DB_PASSWORD: ${DB_PASSWORD:?set in .env}
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-8080},http://127.0.0.1:${FRONTEND_PORT:-8080}
+      ENABLE_API_DOCS: ${ENABLE_API_DOCS:-True}
+    networks: [data, edge]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        VITE_DJANGO_API_URL: /
+        VITE_FASTAPI_URL: /
+    image: ccps-frontend
+    restart: unless-stopped
+    depends_on:
+      django:
+        condition: service_healthy
+      fastapi:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
+    networks: [edge]
+
+networks:
+  # Database traffic only. internal: no host or internet access.
+  data:
+    internal: true
+  # nginx <-> APIs.
+  edge: {}
+
+volumes:
+  mysql_data:

@@ -1,0 +1,20 @@
+[run]
+source = .
+branch = True
+omit =
+    venv/*
+    */migrations/*
+    */tests.py
+    */test_*.py
+    conftest.py
+
+[report]
+show_missing = True
+skip_covered = False
+precision = 1
+exclude_also =
+    if __name__ == .__main__.:
+    raise NotImplementedError
+
+[html]
+directory = htmlcov

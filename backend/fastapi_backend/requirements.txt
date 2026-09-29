@@ -1,0 +1,10 @@
+fastapi>=0.141,<0.142
+uvicorn>=0.54,<0.55
+pydantic>=2.13,<3
+python-dotenv>=1.2,<1.3
+SQLAlchemy>=2.0,<2.1
+PyMySQL>=1.1,<2
+# Required by PyMySQL for MySQL 8's default caching_sha2_password auth.
+cryptography>=46
+# Verifies the HS256 access tokens issued by the Django backend.
+PyJWT>=2.10,<3
