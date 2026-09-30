@@ -129,7 +129,7 @@ export default function OverviewSection() {
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="relative overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table className="w-full min-w-[520px] text-sm" data-testid="last-7-days">
               <caption className="px-4 pt-4 pb-2 text-left text-sm font-semibold text-slate-900">Last 7 days</caption>
               <thead className="bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">

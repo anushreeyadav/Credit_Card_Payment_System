@@ -23,9 +23,10 @@ async function loginAs(page, username, password = ADMIN_PASSWORD) {
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 })
 }
 
-async function openTab(page, name) {
-  await page.getByRole('tab', { name }).click()
-  await expect(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true')
+// Admin console sections are links (sidebar on desktop, a row of pills on phones).
+async function openSection(page, name) {
+  await page.getByRole('link', { name, exact: true }).click()
+  await expect(page.getByRole('link', { name, exact: true })).toHaveAttribute('aria-current', 'page')
 }
 
 async function search(page, text) {
@@ -71,8 +72,8 @@ test.describe('access control', () => {
     await loginAs(page, 'e2e_staff')
     await page.goto('/admin')
     await expect(page.getByRole('heading', { name: 'Admin dashboard' })).toBeVisible()
-    for (const tab of ['Overview', 'Users', 'Cards', 'Transactions', 'Admin logs']) {
-      await openTab(page, tab)
+    for (const section of ['Dashboard', 'Payment Summary', 'Users', 'Cards', 'Transactions', 'Admin Logs']) {
+      await openSection(page, section)
       await expect(page.getByText('You do not have permission to view this section.')).toBeVisible()
     }
   })
@@ -81,6 +82,9 @@ test.describe('access control', () => {
 test('daily statistics update with new payments', async ({ page, request, browser }) => {
   await loginAs(page, 'e2e_admin')
   await page.getByRole('link', { name: 'Admin' }).click()
+  await expect(page.getByRole('heading', { name: 'Admin dashboard' })).toBeVisible()
+  await expect(page.getByTestId('admin-total-transactions')).toHaveText(/^\d+$/)
+  await openSection(page, 'Payment Summary')
   await expect(page.getByTestId('stat-total')).toBeVisible()
   const before = {
     total: await tileValue(page, 'stat-total'),
@@ -139,13 +143,13 @@ test('users, cards, transactions and admin logs views', async ({ page, request, 
   expect((await request.post(`${DJANGO}/api/auth/login/`, { data: { username: user.username, password: PASSWORD } })).status()).toBe(200)
 
   // Cards: masked only.
-  await openTab(page, 'Cards')
+  await openSection(page, 'Cards')
   await search(page, user.username)
   await expect(page.getByTestId('admin-cards-row')).toHaveCount(1)
   await expect(page.getByTestId('admin-cards-row')).toContainText('**** **** **** 1111')
 
   // Transactions: search by reference, filter by status.
-  await openTab(page, 'Transactions')
+  await openSection(page, 'Transactions')
   await search(page, payments[2].reference)
   const txRows = page.getByTestId('admin-transactions-row')
   await expect(txRows).toHaveCount(1)
@@ -158,7 +162,7 @@ test('users, cards, transactions and admin logs views', async ({ page, request, 
   await page.screenshot({ path: `${SCREENSHOTS}/admin-transactions.png`, fullPage: true })
 
   // Admin logs: the deactivation above was recorded, with field names only.
-  await openTab(page, 'Admin logs')
+  await openSection(page, 'Admin Logs')
   await page.getByLabel('Action').selectOption('user_updated')
   await search(page, user.username)
   const logRows = page.getByTestId('admin-logs-row')
@@ -169,8 +173,8 @@ test('users, cards, transactions and admin logs views', async ({ page, request, 
   await page.screenshot({ path: `${SCREENSHOTS}/admin-logs.png`, fullPage: true })
 
   // Nothing sensitive anywhere in the dashboard.
-  for (const tab of ['Overview', 'Users', 'Cards', 'Transactions', 'Admin logs']) {
-    await openTab(page, tab)
+  for (const section of ['Dashboard', 'Payment Summary', 'Users', 'Cards', 'Transactions', 'Admin Logs', 'Export Data']) {
+    await openSection(page, section)
     await page.waitForLoadState('networkidle')
     const html = (await page.content()).toLowerCase()
     expect(html).not.toContain('4111111111111111')
@@ -195,12 +199,12 @@ test.describe('mobile', () => {
 
   test('dashboard fits a phone screen', async ({ page }) => {
     await loginAs(page, 'e2e_admin')
-    await page.goto('/admin')
+    await page.goto('/admin?tab=summary')
     await expect(page.getByTestId('stat-total')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
     await page.screenshot({ path: `${SCREENSHOTS}/admin-mobile.png`, fullPage: true })
 
-    await openTab(page, 'Transactions')
+    await openSection(page, 'Transactions')
     await expect(page.getByTestId('admin-transactions-row').first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
   })

@@ -217,3 +217,193 @@ export function XCircleIcon(props) {
     </Icon>
   )
 }
+
+export function BellIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M6 9.5a6 6 0 1 1 12 0c0 3.8 1.2 5.6 2 6.5H4c.8-.9 2-2.7 2-6.5Z" />
+      <path d="M10 19.5a2.2 2.2 0 0 0 4 0" />
+    </Icon>
+  )
+}
+
+export function SearchIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.2-4.2" />
+    </Icon>
+  )
+}
+
+export function UserIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="8" r="3.8" />
+      <path d="M4.5 20c1.2-3.6 4.1-5.5 7.5-5.5s6.3 1.9 7.5 5.5" />
+    </Icon>
+  )
+}
+
+export function HelpIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6" />
+      <path d="M12 17h.01" />
+    </Icon>
+  )
+}
+
+export function MenuIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M4 6.5h16M4 12h16M4 17.5h16" />
+    </Icon>
+  )
+}
+
+export function XIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m6 6 12 12M18 6 6 18" />
+    </Icon>
+  )
+}
+
+export function ChevronDownIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </Icon>
+  )
+}
+
+export function ChevronRightIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m9 6 6 6-6 6" />
+    </Icon>
+  )
+}
+
+export function ArrowLeftIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M19 12H5m6-6-6 6 6 6" />
+    </Icon>
+  )
+}
+
+export function RefreshIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M20 11a8 8 0 0 0-14.3-4.9L4 8" />
+      <path d="M4 4v4h4" />
+      <path d="M4 13a8 8 0 0 0 14.3 4.9L20 16" />
+      <path d="M20 20v-4h-4" />
+    </Icon>
+  )
+}
+
+export function DownloadIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5" />
+      <path d="M5 19h14" />
+    </Icon>
+  )
+}
+
+export function ExternalIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M14 5h5v5" />
+      <path d="m19 5-8 8" />
+      <path d="M17 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4" />
+    </Icon>
+  )
+}
+
+export function MailIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+      <path d="m4 7 8 6 8-6" />
+    </Icon>
+  )
+}
+
+export function KeyIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="15" r="4" />
+      <path d="m10.8 12.2 8.7-8.7M16 7l2.5 2.5M13.5 9.5 15.5 11.5" />
+    </Icon>
+  )
+}
+
+export function PaletteIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.1 0 1.7-.8 1.7-1.7 0-1.2-1-1.6-1-2.7 0-1 .8-1.6 1.8-1.6H17a3.5 3.5 0 0 0 3.5-3.5c0-4.2-3.8-7.5-8.5-7.5Z" />
+      <circle cx="7.8" cy="11" r="1" />
+      <circle cx="10.5" cy="7.5" r="1" />
+      <circle cx="14.8" cy="7.8" r="1" />
+    </Icon>
+  )
+}
+
+export function PieIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3.5v8.5h8.5A8.5 8.5 0 1 1 12 3.5Z" />
+      <path d="M15 3.8A8.5 8.5 0 0 1 20.2 9H15V3.8Z" />
+    </Icon>
+  )
+}
+
+export function TrendUpIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m4 16 5.5-5.5 4 4L20 8" />
+      <path d="M15 8h5v5" />
+    </Icon>
+  )
+}
+
+export function CopyIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+      <path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" />
+    </Icon>
+  )
+}
+
+export function DatabaseIcon(props) {
+  return (
+    <Icon {...props}>
+      <ellipse cx="12" cy="6" rx="7" ry="2.5" />
+      <path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6" />
+      <path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5" />
+    </Icon>
+  )
+}
+
+export function SunIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" />
+    </Icon>
+  )
+}
+
+export function MoonIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
+    </Icon>
+  )
+}

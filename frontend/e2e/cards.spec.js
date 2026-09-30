@@ -12,7 +12,7 @@ const YY = String((new Date().getFullYear() + 2) % 100).padStart(2, '0')
 
 async function openCards(page) {
   await registerAndLogin(page)
-  await page.getByRole('link', { name: 'Cards', exact: true }).click()
+  await page.getByRole('link', { name: 'My Cards', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Saved cards' })).toBeVisible()
 }
 
@@ -151,7 +151,7 @@ test('loading state, load error and retry', async ({ page }) => {
     return route.continue()
   })
 
-  await page.getByRole('link', { name: 'Cards', exact: true }).click()
+  await page.getByRole('link', { name: 'My Cards', exact: true }).click()
   await expect(page.getByLabel('Loading cards')).toBeVisible()
   await expect(page.getByText('The server had a problem. Please try again shortly.')).toBeVisible()
 

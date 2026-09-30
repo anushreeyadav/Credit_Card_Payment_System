@@ -56,7 +56,7 @@ export default function ConfirmDialog({
             onClick={onConfirm}
             loading={busy}
             loadingText={busyLabel}
-            className="bg-red-600 hover:bg-red-700 focus-visible:outline-red-600 disabled:bg-red-400"
+            className="theme-fixed bg-red-600 hover:bg-red-700 focus-visible:outline-red-600 disabled:bg-red-400"
             autoFocus
           >
             {confirmLabel}

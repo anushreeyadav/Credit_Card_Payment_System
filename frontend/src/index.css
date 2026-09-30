@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./theme-dark.css";
 
 /* Self-hosted Inter (bundled by Vite), so the strict Content-Security-Policy still applies. */
 @theme {
@@ -14,4 +15,76 @@
   body {
     @apply bg-slate-50 text-slate-900;
   }
+
+  /* A visible keyboard focus ring everywhere, even where a component forgot one. */
+  :focus-visible {
+    outline: 2px solid var(--color-indigo-600);
+    outline-offset: 2px;
+  }
+
+  dialog::backdrop {
+    animation: fade-in 0.15s ease-out;
+  }
+}
+
+/* Subtle, short animations. Turned off by the "Reduce motion" setting and by the OS preference. */
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+}
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+}
+@keyframes drawer-left-in {
+  from { transform: translateX(-100%); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+}
+
+@utility page-in {
+  animation: page-in 0.25s ease-out;
+}
+@utility modal-in {
+  animation: modal-in 0.2s ease-out;
+}
+@utility drawer-in {
+  animation: drawer-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@utility drawer-left-in {
+  animation: drawer-left-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@utility toast-in {
+  animation: toast-in 0.2s ease-out;
+}
+@utility pop-in {
+  animation: pop-in 0.15s ease-out;
+}
+@utility tooltip-in {
+  animation: fade-in 0.15s ease-out 0.25s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

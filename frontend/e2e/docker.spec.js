@@ -31,7 +31,7 @@ test('customer journey: register, card, payments, history, session, logout', asy
   await expect(page.getByTestId('card-masked-number')).toHaveText('**** **** **** 1111')
 
   // Payments (FastAPI -> MySQL, reading the card Django stored)
-  await page.getByRole('link', { name: 'Pay', exact: true }).click()
+  await page.getByRole('link', { name: 'Make Payment', exact: true }).click()
   await page.getByLabel('Amount').fill('250')
   await page.getByRole('button', { name: /^Pay/ }).click()
   await expect(page.getByTestId('payment-status')).toHaveAttribute('data-status', 'SUCCESS')
@@ -67,6 +67,8 @@ test('admin dashboard and Django admin through the proxy', async ({ page }) => {
   await page.getByRole('button', { name: 'Log in' }).click()
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 })
   await page.getByRole('link', { name: 'Admin' }).click()
+  await expect(page.getByRole('heading', { name: 'Admin dashboard' })).toBeVisible()
+  await page.getByRole('link', { name: 'Payment Summary', exact: true }).click()
   await expect(Number(await page.getByTestId('stat-total').textContent())).toBeGreaterThanOrEqual(2)
   await page.screenshot({ path: `${SCREENSHOTS}/docker-admin.png`, fullPage: true })
 

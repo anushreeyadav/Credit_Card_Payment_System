@@ -10,6 +10,9 @@ export const BRANDS = {
   rupay: { label: 'RuPay', lengths: [16], gradient: 'from-emerald-600 to-teal-800' },
 }
 
+// Display info for a saved card's brand, with a neutral fallback for unknown types.
+export const brandOf = (card) => BRANDS[card.card_type] ?? { label: card.card_type, gradient: 'from-slate-600 to-slate-800' }
+
 const RULES = [
   ['amex', (n) => ['34', '37'].includes(n.slice(0, 2))],
   ['visa', (n) => n[0] === '4'],

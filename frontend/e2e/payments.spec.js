@@ -11,7 +11,7 @@ const REFERENCE = /^PAY-[0-9A-F]{24}$/
 async function openPaymentWithCard(page, card) {
   await registerAndLogin(page)
   await addCardViaUi(page, card)
-  await page.getByRole('link', { name: 'Pay', exact: true }).click()
+  await page.getByRole('link', { name: 'Make Payment', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Make a payment' })).toBeVisible()
   await expect(page.getByRole('radio').first()).toBeChecked()
 }
@@ -26,11 +26,12 @@ const status = (page) => page.getByTestId('payment-status')
 
 test('no saved card', async ({ page }) => {
   await registerAndLogin(page)
-  await page.getByRole('link', { name: 'Pay', exact: true }).click()
+  await page.getByRole('link', { name: 'Make Payment', exact: true }).click()
 
   await expect(page.getByTestId('no-cards')).toContainText('No saved cards')
   await page.getByRole('link', { name: 'Add a card' }).click()
-  await expect(page).toHaveURL(/\/cards$/)
+  await expect(page).toHaveURL(/\/cards\?add=1$/) // opens the add-card form straight away
+  await expect(page.getByLabel('Card number')).toBeVisible()
 })
 
 test('successful payment shows SUCCESS and a reference ID', async ({ page }) => {

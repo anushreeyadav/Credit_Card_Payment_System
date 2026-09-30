@@ -1,14 +1,14 @@
 // Shared button styles for Button and ButtonLink (and anything that needs to look like one).
 const VARIANTS = {
   primary:
-    'bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-sm shadow-indigo-600/25 ring-1 ring-inset ring-indigo-700/20 hover:from-indigo-500 hover:to-indigo-700 hover:shadow-md hover:shadow-indigo-600/30 focus-visible:outline-indigo-600 disabled:from-indigo-300 disabled:to-indigo-400 disabled:shadow-none',
+    'theme-fixed bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-sm shadow-indigo-600/25 ring-1 ring-inset ring-indigo-700/20 hover:from-indigo-500 hover:to-indigo-700 hover:shadow-md hover:shadow-indigo-600/30 focus-visible:outline-indigo-600 disabled:from-indigo-300 disabled:to-indigo-400 disabled:shadow-none',
   secondary:
     'bg-white text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 hover:text-slate-900 hover:ring-slate-400 focus-visible:outline-indigo-600 disabled:text-slate-400',
   soft: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 focus-visible:outline-indigo-600 disabled:opacity-60',
   success:
-    'bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-sm shadow-emerald-600/25 hover:to-emerald-700 hover:shadow-md focus-visible:outline-emerald-600 disabled:opacity-60',
+    'theme-fixed bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-sm shadow-emerald-600/25 hover:to-emerald-700 hover:shadow-md focus-visible:outline-emerald-600 disabled:opacity-60',
   danger:
-    'bg-gradient-to-b from-red-500 to-red-600 text-white shadow-sm shadow-red-600/25 hover:to-red-700 hover:shadow-md focus-visible:outline-red-600 disabled:from-red-300 disabled:to-red-400',
+    'theme-fixed bg-gradient-to-b from-red-500 to-red-600 text-white shadow-sm shadow-red-600/25 hover:to-red-700 hover:shadow-md focus-visible:outline-red-600 disabled:from-red-300 disabled:to-red-400',
   'danger-soft': 'text-red-600 hover:bg-red-50 focus-visible:outline-red-600',
   ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-indigo-600',
 }

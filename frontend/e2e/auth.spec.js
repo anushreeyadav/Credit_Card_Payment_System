@@ -162,7 +162,7 @@ test.describe('logout and session expiry', () => {
     await page.waitForTimeout((ACCESS_TOKEN_SECONDS + 2) * 1000)
 
     const refreshed = page.waitForResponse((r) => r.url().endsWith('/api/auth/refresh/') && r.status() === 200)
-    await page.getByRole('link', { name: 'Cards', exact: true }).click()
+    await page.getByRole('link', { name: 'My Cards', exact: true }).click()
     await page.getByRole('link', { name: 'Dashboard', exact: true }).click()
     await refreshed
 
@@ -176,7 +176,7 @@ test.describe('logout and session expiry', () => {
     await page.waitForTimeout((ACCESS_TOKEN_SECONDS + 2) * 1000)
 
     // The Cards page loads cards on open; the expired session is detected there.
-    await page.getByRole('link', { name: 'Cards', exact: true }).click()
+    await page.getByRole('link', { name: 'My Cards', exact: true }).click()
 
     await expect(page).toHaveURL(/\/login$/)
     await expect(page.getByText('Your session has expired. Please log in again.')).toBeVisible()

@@ -2,7 +2,7 @@
 // so the page itself never overflows.
 export default function DataTable({ columns, rows, rowKey, testId }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="relative overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
       <table className="w-full min-w-[720px] text-left text-sm" data-testid={testId}>
         <thead className="bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
           <tr>

@@ -14,7 +14,7 @@ const FEATURES = [
 export default function AuthLayout() {
   return (
     <div className="flex min-h-screen bg-white">
-      <aside className="relative hidden w-[44%] max-w-xl overflow-hidden bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 p-12 text-white lg:flex lg:flex-col">
+      <aside className="theme-fixed relative hidden w-[44%] max-w-xl overflow-hidden bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 p-12 text-white lg:flex lg:flex-col">
         <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-indigo-500/30 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl" />
 

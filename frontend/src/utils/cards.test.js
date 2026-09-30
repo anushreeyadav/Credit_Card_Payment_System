@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  brandOf,
   detectBrand,
   digitsOnly,
   formatCardExpiry,
@@ -116,5 +117,12 @@ describe('isExpired', () => {
     expect(isExpired({ expiry_month: 8, expiry_year: 2026 }, TODAY)).toBe(true)
     expect(isExpired({ expiry_month: 1, expiry_year: 2027 }, TODAY)).toBe(false)
     expect(isExpired({ expiry_month: 12, expiry_year: 2025 }, TODAY)).toBe(true)
+  })
+})
+
+describe('brandOf', () => {
+  it('returns the brand, or a neutral fallback for unknown types', () => {
+    expect(brandOf({ card_type: 'visa' }).label).toBe('Visa')
+    expect(brandOf({ card_type: 'unionpay' })).toEqual({ label: 'unionpay', gradient: 'from-slate-600 to-slate-800' })
   })
 })

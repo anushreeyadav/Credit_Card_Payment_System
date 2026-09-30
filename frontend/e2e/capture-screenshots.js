@@ -47,6 +47,9 @@ async function shot(page, name, { fullPage = true } = {}) {
   expect(inputs.filter((i) => /cvv|cvc/i.test(i.name)), `${name}: CVV field`).toEqual([])
   expect(text, `${name}: CVV value`).not.toMatch(/\bcvv\b\s*[:=]\s*\d/i)
 
+  // Dismiss confirmation toasts from earlier steps and start from the top of the page.
+  for (const close of await page.getByRole('button', { name: 'Dismiss notification' }).all()) await close.click()
+  await page.evaluate(() => window.scrollTo(0, 0))
   await page.mouse.move(0, 0) // no hover highlight in the picture
   await page.screenshot({ path: `${OUT}/${name}.png`, fullPage })
 }
@@ -95,7 +98,7 @@ test('customer screens', async ({ page }) => {
   await shot(page, '03-dashboard')
 
   // 4. Add card: a partial number shows brand detection; the full number is never on screen
-  await page.getByRole('link', { name: 'Cards', exact: true }).click()
+  await page.getByRole('link', { name: 'My Cards', exact: true }).click()
   await expect(page.getByTestId('card-tile')).toHaveCount(3)
   await page.getByRole('button', { name: 'Add card', exact: true }).click()
   await page.getByLabel('Card number').fill('510510')
@@ -112,7 +115,7 @@ test('customer screens', async ({ page }) => {
   await shot(page, '05-saved-cards')
 
   // 6. Make payment
-  await page.getByRole('link', { name: 'Pay', exact: true }).click()
+  await page.getByRole('link', { name: 'Make Payment', exact: true }).click()
   await page.getByRole('radio', { name: 'Visa **** **** **** 1111' }).check()
   await page.getByLabel('Amount').fill('2499')
   await page.getByLabel('Note').fill('Broadband bill - October')
@@ -145,6 +148,57 @@ test('customer screens', async ({ page }) => {
   await expect(page).toHaveURL(/status=SUCCESS/)
   await expect(page.getByTestId('pagination-summary')).toContainText('of 6')
   await shot(page, '10-transaction-filtering')
+
+  // 17. Payment analytics (charts from the real transactions)
+  await page.getByRole('link', { name: 'Payment Analytics', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Payments by date' })).toBeVisible()
+  await shot(page, '17-payment-analytics')
+
+  // 18. Transaction details drawer
+  await page.getByRole('link', { name: 'Transactions', exact: true }).click()
+  await page.getByRole('button', { name: /^View details of PAY-/ }).first().click()
+  await expect(page.getByTestId('transaction-details')).toBeVisible()
+  await shot(page, '18-transaction-details', { fullPage: false })
+  await page.keyboard.press('Escape')
+
+  // 19. Notification centre (bell dropdown with the latest payment results)
+  await page.getByRole('button', { name: /^Notifications/ }).click()
+  await expect(page.getByRole('region', { name: 'Notifications panel' })).toBeVisible()
+  await shot(page, '19-notifications', { fullPage: false })
+  await page.keyboard.press('Escape')
+
+  // 20-22. Profile, settings, help & support
+  await page.getByRole('link', { name: 'Profile', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Personal information' })).toBeVisible()
+  await shot(page, '20-profile')
+  await page.getByRole('link', { name: 'Settings', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Notification preferences' })).toBeVisible()
+  await shot(page, '21-settings')
+  await page.getByRole('link', { name: 'Help & Support', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'How can we help?' })).toBeVisible()
+  await page.getByText('What does PENDING mean?').click()
+  await shot(page, '22-help-support')
+
+  // 27-28. Dark theme (header toggle; saved in the browser)
+  await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click()
+  await expect(page.getByTestId('stat-cards')).toHaveText('4')
+  await shot(page, '27-dark-dashboard')
+  await page.getByRole('link', { name: 'Transactions', exact: true }).click()
+  await expect(page.getByTestId('transaction-row')).toHaveCount(10)
+  await shot(page, '28-dark-transactions')
+  await page.getByRole('button', { name: 'Switch to light theme' }).click()
+  await expect(page.locator('html')).not.toHaveClass(/dark/)
+
+  // 25-26. Phone layout: dashboard and the navigation drawer
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click()
+  await expect(page.getByTestId('stat-cards')).toHaveText('4')
+  await shot(page, '25-mobile-dashboard', { fullPage: false })
+  await page.getByRole('button', { name: 'Open navigation menu' }).click()
+  await expect(page.getByRole('dialog', { name: 'Navigation menu' })).toBeVisible()
+  await shot(page, '26-mobile-navigation', { fullPage: false })
 })
 
 test('admin screens', async ({ page }) => {
@@ -156,19 +210,30 @@ test('admin screens', async ({ page }) => {
   await shot(page, '11-admin-users')
 
   // 12. Admin cards
-  await page.getByRole('tab', { name: 'Cards' }).click()
+  await page.getByRole('link', { name: 'Cards', exact: true }).click()
   await expect(page.getByTestId('admin-cards-row')).toHaveCount(8)
   await shot(page, '12-admin-cards')
 
   // 13. Admin transactions
-  await page.getByRole('tab', { name: 'Transactions' }).click()
+  await page.getByRole('link', { name: 'Transactions', exact: true }).click()
   await expect(page.getByTestId('admin-transactions-row')).toHaveCount(10)
   await shot(page, '13-admin-transactions')
 
   // 14. Daily payment summary
-  await page.getByRole('tab', { name: 'Overview' }).click()
+  await page.getByRole('link', { name: 'Payment Summary', exact: true }).click()
   await expect(Number(await page.getByTestId('stat-total').textContent())).toBeGreaterThan(0)
   await shot(page, '14-daily-payment-summary')
+
+  // 23. Admin dashboard (system totals and the last 7 days)
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click()
+  await expect(page.getByTestId('admin-total-users')).toHaveText('8')
+  await expect(page.getByRole('heading', { name: 'Payments in the last 7 days' })).toBeVisible()
+  await shot(page, '23-admin-dashboard')
+
+  // 24. Export data (CSV export in the Django admin)
+  await page.getByRole('link', { name: 'Export Data', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Export transactions to CSV' })).toBeVisible()
+  await shot(page, '24-admin-export')
 })
 
 test('API documentation', async ({ page }) => {
